@@ -1,0 +1,12 @@
+[Unit]
+Description=A Vultr App to be executed on system startup
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=npm start --prefix /root/app
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

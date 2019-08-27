@@ -1,0 +1,96 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  color: #222;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  color: #222;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  border: 1px solid black;
+  outline: none;
+  margin: 0 5px;
+}
+
+select {
+  margin: 5px;
+}
+
+a, button {
+  outline: none;
+}
+
+#servers, #zones, .content-box {
+  margin: 15px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.button {
+  background-color: #FFF;
+  text-decoration: none;
+  color: #222;
+  border-radius: 4px;
+  padding: 3px 5px;
+  border: 1px solid black;
+  font-size: 18px;
+  cursor: pointer;
+}
+.button:hover {
+  background-color: #222;
+  color: #FFF;
+}
+
+.red-back {
+  color: #F33;
+  border: 1px solid #F33;
+}
+.red-back:hover {
+  background-color: #F33;
+}
+
+.cell {
+  display: inline-block;
+  padding: 10px;
+  margin: 2px 0px;
+  min-width: 100px;
+  text-align: center;
+}
+.cell:hover {
+  background-color: #EEE;
+}
+
+.server-box {
+  line-height: 0.2;
+  margin: 5px;
+  width: 400px;
+  padding: 5px;
+  border: 1px solid black;
+  display: inline-block;
+}
+
+.zone-box {
+  line-height: 0.2;
+  margin: 5px;
+  padding: 5px;
+  width: 400px;
+  border: 1px solid black;
+  display: inline-block;
+}
+
+.no-decoration {
+  text-decoration: none;
+  color: inherit;
+}
