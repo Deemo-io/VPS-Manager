@@ -34,14 +34,22 @@ class ServerPage extends React.Component {
   }
 
   uploadApp() {
-    let files = new FormData();
+    let uploadData = new FormData();
+
+    //the uploadIgnore part
+    console.log("ignore:",document.getElementById('uploadignore').value);
+    let uploadIgnore = document.getElementById('uploadignore').value;
+    console.log(uploadIgnore);
+    uploadData.append('uploadignore', uploadIgnore);
+
+    //add files
     for (let i = 0; i < this.filesRef.files.length; i++) {
-      files.append(this.filesRef.files[i].name, this.filesRef.files[i]);
+      uploadData.append(this.filesRef.files[i].name, this.filesRef.files[i]);
     }
 
     fetch('http://localhost:3000/server/'+this.props.server.SUBID+'/uploadApp', {
       method: 'POST',
-      body: files
+      body: uploadData
     });
   }
 
@@ -72,7 +80,8 @@ class ServerPage extends React.Component {
           <div>
             <form onSubmit={(e) => {e.preventDefault();this.uploadApp()}}>
               <input onChange={(e)=>this.filesChange(e)} ref={(ref) => this.filesRef = ref} type="file" multiple webkitdirectory="true" directory="true" style={{display: 'none'}}/>
-              <button className="button" onClick={(e) => {e.preventDefault();this.filesRef.click()}}>Upload package.json</button>
+              <button className="button" onClick={(e) => {e.preventDefault();this.filesRef.click()}}>Upload Your project folder...</button>
+              <textarea placeholder="" defaultValue={"node_modules\npackage-lock.json"} style={{display: 'block', margin: '10px 0'}} id="uploadignore"></textarea>
 
               <button style={{marginLeft: '10px'}} className="button" type="submit">Submit</button>
             </form>

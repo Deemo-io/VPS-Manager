@@ -79,12 +79,16 @@ app.post('/server/destroy', function(req, res) {
 
 app.post('/server/:subid/uploadApp', function(req, res) {
   let busboy = new Busboy({ headers: req.headers, preservePath: true });
-  tape = new Tar({output: require('fs').createWriteStream('./uploads/out.tar')});
+  let filesMap = {};//the key is the filename, value is file contents
+  let ignoreFiles = [];//the files/directories that we are supposed to ignore
+  if (!fs.existsSync('./uploads')) {
+    fs.mkdirSync('./uploads');
+  }
+  tape = new Tar({output: fs.createWriteStream('./uploads/out.tar')});
 
-  // tape.append('vultrApp.service', fs.)
   fs.readFile('./apis/vultrApp.service', (err, data) => {
     if (err) return console.log(err);
-    console.log(data);
+
     tape.append('vultrApp.service', data, () => {
       console.log('added vultrApp.service');
     });
@@ -92,22 +96,61 @@ app.post('/server/:subid/uploadApp', function(req, res) {
 
   //ever time we get a file, add it to the tar file
   busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
-    // console.log(file);
+    //here we are assuming that ignoreFiles has already arrived
+    //I think it's safe because someone on stackoverflow said order is garunteed
+    //for multipart/form-data
     file.on('data', (data) => {
-      tape.append(filename.slice(filename.indexOf('/')+1), data, () => {
-        console.log('added ' + filename)
-      });
+      //early termination if filename matches an ignore file
+      for (let i = 0; i < ignoreFiles.length; i++) {
+        if (filename.indexOf(ignoreFiles[i]) !== -1) {
+          return;
+        }
+      }
+      //add files to map
+      const newFilename = filename.slice(filename.indexOf('/')+1);
+      if (filesMap[newFilename]) {
+        filesMap[newFilename] += data;
+      }
+      else {
+        filesMap[newFilename] = data;
+      }
+      //add file to tape
+      // tape.append(filename.slice(filename.indexOf('/')+1), data, () => {
+      //   console.log('added ' + filename);
+      // });
     });
+  });
+
+  busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
+    console.log('got '+fieldname+' with value: '+val);
+    if (fieldname === "uploadignore") {
+      ignoreFiles = val.split('\n');
+    }
   });
 
   //when we're done getting files, close the tar file
   busboy.on('finish', () => {
-    tape.close();
-    //we have to get our server before we do anything
-    vultr.getServer(req.params.subid, (err, result) => {
-      if (err) return res.json(err);
-      vultr.deployApp(fs.createReadStream(path.join(process.cwd(),'uploads','out.tar')), result[req.params.subid]);
-    });
+    //write all the files to the tape
+    let numWritten = 0;
+    const filenames = Object.keys(filesMap);
+    //loop through every file name (key) in filesMap
+    for (let i = 0; i < filenames.length; i++) {
+      //write the data from that filename to the tape
+      tape.append(filenames[i], filesMap[filenames[i]], () => {
+        console.log('added ' + filenames[i]);
+        numWritten++;
+        //kept track of the number of files written so we can execute this at last
+        if (numWritten === filenames.length) {
+          tape.close();
+
+          //we have to get our server before we do anything
+          vultr.getServer(req.params.subid, (err, result) => {
+            if (err) return res.json(err);
+            vultr.deployApp(fs.createReadStream(path.join(process.cwd(),'uploads','out.tar')), result[req.params.subid]);
+          });
+        }
+      });
+    }
   });
 
   //send a thing back to user
