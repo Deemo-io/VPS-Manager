@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, Redirect } from 'react-router-dom';
+import Settings from '../../settings';
 
 class AddServer extends React.Component {
   constructor(props) {
@@ -18,7 +19,7 @@ class AddServer extends React.Component {
   }
 
   getPlanList() {
-    fetch('http://localhost:3000/server/plans')
+    fetch(Settings.host+'/server/plans')
     .then(res => res.json())
     .then(res => {
       //convert object to array
@@ -35,7 +36,7 @@ class AddServer extends React.Component {
   }
 
   getOsList() {
-    fetch('http://localhost:3000/server/oses')
+    fetch(Settings.host+'/server/oses')
     .then(res => res.json())
     .then(res => {
       let keys = Object.keys(res);
@@ -51,7 +52,7 @@ class AddServer extends React.Component {
   }
 
   getRegionList() {
-    fetch('http://localhost:3000/server/regions')
+    fetch(Settings.host+'/server/regions')
     .then(res => res.json())
     .then(res => {
       let keys = Object.keys(res);
@@ -67,7 +68,7 @@ class AddServer extends React.Component {
   }
 
   createServer() {
-    fetch('http://localhost:3000/server/create', {
+    fetch(Settings.host+'/server/create', {
       method: 'POST',
       body: JSON.stringify({
         VPSPLANID: this.state.selectedPlan,

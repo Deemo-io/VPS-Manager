@@ -1,10 +1,12 @@
 import React from 'react';
-import { BrowserRouter, Route } from 'react-router-dom';
-import HomeScreen from './components/HomeScreen';
-import AddZone from './components/AddZone';
-import ZonePage from './components/ZonePage';
-import ServerPage from './components/ServerPage';
-import AddServer from './components/AddServer';
+import { BrowserRouter, Route, Switch } from 'react-router-dom';
+import HomeScreen from './components/pages/HomeScreen';
+import AddZone from './components/pages/AddZone';
+import ZonePage from './components/pages/ZonePage';
+import ServerPage from './components/pages/ServerPage';
+import AddServer from './components/pages/AddServer';
+import SshPage from './components/pages/SshPage';
+import Settings from './settings';
 
 class App extends React.Component {
   constructor(props) {
@@ -12,13 +14,14 @@ class App extends React.Component {
 
     this.state = {
       servers: [],
-      zones: []
+      zones: [],
+      socket: null
     }
   }
 
   //update cloudflare zones
   getZones() {
-    fetch('http://localhost:3000/zones')
+    fetch(Settings.host+'/zones')
     .then(res => res.json())
     .then(zones => {
 
@@ -31,7 +34,7 @@ class App extends React.Component {
 
   //updates the 'servers' state
   getServers() {
-    fetch('http://localhost:3000/servers')
+    fetch(Settings.host+'/servers')
     .then(res => res.json())
     .then(servers => {
       //convert from object to array
@@ -58,20 +61,26 @@ class App extends React.Component {
 
     return (
       <BrowserRouter>
-        <Route path="/" exact render={(props) => <HomeScreen {...props}
-          refresh={this.componentDidMount.bind(this)}
-          servers={this.state.servers}
-          zones={this.state.zones} />} />
+        <Switch>
+          <Route path="/" exact render={(props) => <HomeScreen {...props}
+            refresh={this.componentDidMount.bind(this)}
+            servers={this.state.servers}
+            zones={this.state.zones} />} />
 
-        <Route path="/zone/:zoneid" render={props => <ZonePage {...props}
-          zone={this.state.zones.find(zone => zone.id === props.match.params.zoneid)} />} />
+          <Route path="/zone/:zoneid" render={props => <ZonePage {...props}
+            zone={this.state.zones.find(zone => zone.id === props.match.params.zoneid)} />} />
 
-        <Route path="/addZone" component={AddZone} />
+          <Route path="/addZone" component={AddZone} />
 
-        <Route path="/server/:serverid" render={props => <ServerPage {...props}
-          server={this.state.servers.find(server => server.SUBID === props.match.params.serverid)} />} />
+          <Route path="/server/ssh/:serverid" render={props => <SshPage {...props}
+            server={this.state.servers.find(server => server.SUBID === props.match.params.serverid)}
+            socket={this.state.socket} />} />
 
-        <Route path="/addServer" component={AddServer} />
+          <Route path="/server/:serverid" render={props => <ServerPage {...props}
+            server={this.state.servers.find(server => server.SUBID === props.match.params.serverid)} />} />
+
+          <Route path="/addServer" component={AddServer} />
+        </Switch>
       </BrowserRouter>
     );
   }

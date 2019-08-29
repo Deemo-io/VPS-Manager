@@ -1,25 +1,15 @@
 import React from 'react';
-import Server from './Server';
-import Zone from './Zone';
+import Server from '../Server';
+import Zone from '../Zone';
 import { Link } from 'react-router-dom';
 
 class HomeScreen extends React.Component {
-  // constructor(props) {
-  //   super(props);
-  //
-  //   this.state = {
-  //     servers: [],
-  //     zones: []
-  //   }
-  // }
 
   componentDidMount() {
     this.props.refresh();
   }
 
   render() {
-    // this.props.refresh();
-
     return (
       <React.Fragment>
 

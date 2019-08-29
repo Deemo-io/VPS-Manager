@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, Redirect } from 'react-router-dom';
+import Settings from '../../settings';
 
 class AddZone extends React.Component {
   constructor(props) {
@@ -12,7 +13,7 @@ class AddZone extends React.Component {
   }
 
   addZone() {
-    fetch('http://localhost:3000/createZone', {
+    fetch(Settings.host+'/createZone', {
       method: 'POST',
       body: JSON.stringify({
         domain: this.state.domain

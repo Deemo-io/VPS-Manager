@@ -77,6 +77,18 @@ app.post('/server/destroy', function(req, res) {
   })
 });
 
+app.post('/server/:subid/ssh', function(req, res) {
+  vultr.getServer(req.params.subid, (err, result) => {
+    if (err) return res.json(err);
+
+    vultr.exec(req.body.command, result[req.params.subid], (err, result) => {
+      if (err) return res.json(err);
+
+      res.json({output: result});
+    });
+  });
+});
+
 app.post('/server/:subid/uploadApp', function(req, res) {
   let busboy = new Busboy({ headers: req.headers, preservePath: true });
   let filesMap = {};//the key is the filename, value is file contents
@@ -99,11 +111,14 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     //here we are assuming that ignoreFiles has already arrived
     //I think it's safe because someone on stackoverflow said order is garunteed
     //for multipart/form-data
+    let filenameParts = filename.split('/');
     file.on('data', (data) => {
       //early termination if filename matches an ignore file
       for (let i = 0; i < ignoreFiles.length; i++) {
-        if (filename.indexOf(ignoreFiles[i]) !== -1) {
-          return;
+        for (let j = 0; j < filenameParts.length; j++) {
+          if (filenameParts[j] === ignoreFiles[i]) {
+            return;
+          }
         }
       }
       //add files to map
@@ -114,10 +129,6 @@ app.post('/server/:subid/uploadApp', function(req, res) {
       else {
         filesMap[newFilename] = data;
       }
-      //add file to tape
-      // tape.append(filename.slice(filename.indexOf('/')+1), data, () => {
-      //   console.log('added ' + filename);
-      // });
     });
   });
 

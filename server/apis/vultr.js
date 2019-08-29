@@ -183,6 +183,28 @@ VultrClient.prototype.destroyServer = function(subid, callback) {
 //   });
 // }
 
+VultrClient.prototype.exec = function(command, server, callback) {
+  let conn = new Client();
+  conn.on('ready', () => {
+    conn.exec(command, (err, stream) => {
+      if (err) return callback(err);
+      let finalData = "";
+
+      stream.on('data', (data) => {
+        finalData += data.toString();
+        console.log(data.toString());
+      });
+      stream.on('end', () => {
+        callback(undefined, finalData);
+      });
+    });
+  }).connect({
+    host: server['main_ip'],
+    username: 'root',
+    password: server['default_password']
+  });
+}
+
 VultrClient.prototype.deployApp = function(stream, server) {
   //create ssh2 connection to server
   let conn = new Client();

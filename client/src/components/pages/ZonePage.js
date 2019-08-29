@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Redirect } from 'react-router-dom';
-import DnsRecord from './DnsRecord';
+import DnsRecord from '../DnsRecord';
+import Settings from '../../settings';
 
 class ZonePage extends React.Component {
   constructor(props) {
@@ -17,7 +18,7 @@ class ZonePage extends React.Component {
 
   //this deletes the whole zone
   delete() {
-    fetch('http://localhost:3000/zone/'+this.props.zone.id+'/deleteZone', {
+    fetch(Settings.host+'/zone/'+this.props.zone.id+'/deleteZone', {
       method: 'POST'
     })
     .then(res => res.json())
@@ -31,7 +32,7 @@ class ZonePage extends React.Component {
 
   //this adds a dns record
   addDnsRecord() {
-    fetch('http://localhost:3000/zone/'+this.props.match.params.zoneid+'/adddns', {
+    fetch(Settings.host+'/zone/'+this.props.match.params.zoneid+'/adddns', {
       method: 'POST',
       body: JSON.stringify({
         type: this.state.type,
@@ -54,7 +55,7 @@ class ZonePage extends React.Component {
   }
 
   refreshDnsRecords() {
-    fetch('http://localhost:3000/zone/'+this.props.match.params.zoneid+'/getDns')
+    fetch(Settings.host+'/zone/'+this.props.match.params.zoneid+'/getDns')
     .then(res => res.json())
     .then(res => {
       this.setState({dns: res.result});
