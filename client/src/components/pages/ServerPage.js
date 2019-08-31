@@ -16,7 +16,7 @@ class ServerPage extends React.Component {
 
   //delete the server who's page we're on
   delete() {
-    fetch(Settings.host+'server/destroy', {
+    fetch(Settings.host+'/server/destroy', {
       method: 'POST',
       body: JSON.stringify({
         SUBID: this.props.server.SUBID
@@ -38,9 +38,7 @@ class ServerPage extends React.Component {
     let uploadData = new FormData();
 
     //the uploadIgnore part
-    console.log("ignore:",document.getElementById('uploadignore').value);
     let uploadIgnore = document.getElementById('uploadignore').value;
-    console.log(uploadIgnore);
     uploadData.append('uploadignore', uploadIgnore);
 
     //add files

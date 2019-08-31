@@ -11,6 +11,8 @@ const Busboy = require('busboy');
 if (!process.env.VULTR_API_KEY) console.log("VULTR_API_KEY NOT FOUND, CHECK ENV.SH");
 
 const app = express();
+const server = require('http').createServer(app);
+const io = require('socket.io')(server);
 const vultr = new VultrClient({apiKey: process.env.VULTR_API_KEY});
 const cloudflare = new CloudflareClient({apiKey: process.env.CLOUDFLARE_API_KEY, email: process.env.CLOUDFLARE_EMAIL})
 
@@ -102,7 +104,7 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     if (err) return console.log(err);
 
     tape.append('vultrApp.service', data, () => {
-      console.log('added vultrApp.service');
+      //TODO send client something
     });
   });
 
@@ -148,7 +150,8 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     for (let i = 0; i < filenames.length; i++) {
       //write the data from that filename to the tape
       tape.append(filenames[i], filesMap[filenames[i]], () => {
-        console.log('added ' + filenames[i]);
+        // console.log('added ' + filenames[i]);
+        //TODO send client something here
         numWritten++;
         //kept track of the number of files written so we can execute this at last
         if (numWritten === filenames.length) {
@@ -229,7 +232,30 @@ app.post('/zone/:zoneid/adddns', function(req, res) {
   });
 });
 
-app.listen(process.env.PORT || 3000, function(err) {
+//socket.io stuff
+io.on('connection', function(socket) {
+  socket.on('ssh', (data) => {
+    // console.log(JSON.parse(data));
+    const parsedData = JSON.parse(data);
+    console.log(parsedData);
+    vultr.getServer(parsedData.server, (err, result) => {
+      // if (err) return res.json(err);
+      if (err) return socket.emit('sshResp', JSON.stringify({error: true, message: err}));
+
+      vultr.exec(parsedData.command, result[parsedData.server], (data) => {
+        // if (err) return res.json(err);
+        // if (err) return socket.emit('sshResp', JSON.stringify({error: true, message: err}));
+        //TODO do error checking
+
+        // res.json({output: result});
+        socket.emit('sshResp', JSON.stringify({message: data}));
+      }, () => socket.emit('sshResp', JSON.stringify({finished: true})));
+    });
+  });
+});
+
+//have our app listen, default port is 3000
+server.listen(process.env.PORT || 3000, function(err) {
   if (err) return console.log(err);
 
   console.log('app listening on port', process.env.PORT || 3000);

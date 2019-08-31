@@ -183,19 +183,21 @@ VultrClient.prototype.destroyServer = function(subid, callback) {
 //   });
 // }
 
-VultrClient.prototype.exec = function(command, server, callback) {
+VultrClient.prototype.exec = function(command, server, onData, onEnd) {
   let conn = new Client();
   conn.on('ready', () => {
     conn.exec(command, (err, stream) => {
-      if (err) return callback(err);
-      let finalData = "";
+      //I guess we assume no error uwu
+      // if (err) return callback(err);
 
       stream.on('data', (data) => {
-        finalData += data.toString();
-        console.log(data.toString());
+        console.log('data:', data.toString());
+        onData(data.toString());
       });
       stream.on('end', () => {
-        callback(undefined, finalData);
+        // callback(undefined, finalData);
+        onEnd();
+        conn.end();
       });
     });
   }).connect({
@@ -242,7 +244,7 @@ VultrClient.prototype.deployApp = function(stream, server) {
               process.stdout.write('.');
               // process.stdout.write(chunk.toString());
             });
-;
+
             stream.on('end', () => {
               console.log('app decompressed...');
               console.log('installing node.js...');

@@ -40,7 +40,7 @@ class AddZone extends React.Component {
         <h1>Add a Zone</h1>
         <div className="content-box">
           <Link to="/" className="button">back</Link>
-          <form onSubmit={(e) => {e.preventDefault(); this.addZone()}}>
+          <form style={{marginTop: '10px'}} onSubmit={(e) => {e.preventDefault(); this.addZone()}}>
             <input placeholder="Name" value={this.state.domain}
             onChange={(e) => this.setState({domain:e.target.value})} />
 

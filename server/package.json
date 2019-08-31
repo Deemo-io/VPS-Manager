@@ -17,6 +17,7 @@
     "fstream-ignore": "^1.0.5",
     "request": "^2.88.0",
     "request-promise": "^4.2.4",
+    "socket.io": "^2.2.0",
     "ssh2": "^0.8.5",
     "tar": "^2.2.2",
     "tar-async": "^1.2.0",

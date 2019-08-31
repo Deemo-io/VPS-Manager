@@ -1,32 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Settings from '../../settings';
 
 class SshPage extends React.Component {
-  sendCommand(e) {
-    e.preventDefault();
-
-    fetch(Settings.host+'/server/'+this.props.match.params.serverid+'/ssh', {
-      method: 'POST',
-      body: JSON.stringify({
-        command: document.getElementById('command').value
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(res => res.json())
-    .then(res => {
-      const textarea = document.getElementById('output');
-      textarea.value += res.output;
-      textarea.scrollTop = textarea.scrollHeight;
-      document.getElementById('command').value = "";
-    })
-    .catch(err => {
-      console.log(err);
-    })
-  }
-
   componentDidMount() {
     document.getElementById('command').focus();
   }
@@ -41,9 +16,10 @@ class SshPage extends React.Component {
 
           <textarea id="output" style={{width: '100%', height: '500px', margin: '10px 0', padding: '0'}}></textarea>
 
-          <form onSubmit={(e) => this.sendCommand(e)}>
+          <form onSubmit={this.props.sendCommand}>
             <input type="text" id="command" placeholder="Command..." style={{width: '100%', margin: '0', padding: '0'}} />
           </form>
+          <p style={this.props.loading ? null : {display: 'none'}}>Loading...</p>
         </div>
       </React.Fragment>
     );
