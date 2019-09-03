@@ -20,8 +20,7 @@
     "socket.io": "^2.2.0",
     "ssh2": "^0.8.5",
     "tar": "^2.2.2",
-    "tar-async": "^1.2.0",
-    "zlib": "^1.0.5"
+    "tar-async": "^1.2.0"
   },
   "devDependencies": {
     "nodemon": "^1.19.1"

@@ -100,13 +100,11 @@ app.post('/server/:subid/uploadApp', function(req, res) {
   }
   tape = new Tar({output: fs.createWriteStream('./uploads/out.tar')});
 
-  fs.readFile('./apis/vultrApp.service', (err, data) => {
-    if (err) return console.log(err);
-
-    tape.append('vultrApp.service', data, () => {
-      //TODO send client something
-    });
+  //we write the head here so we can send a stream as a result
+  res.writeHead(200, {
+    'Content-Type': 'plain/text'
   });
+  res.write("bundling files...\n");
 
   //ever time we get a file, add it to the tar file
   busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
@@ -135,7 +133,7 @@ app.post('/server/:subid/uploadApp', function(req, res) {
   });
 
   busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
-    console.log('got '+fieldname+' with value: '+val);
+    // console.log('got '+fieldname+' with value: '+val);
     if (fieldname === "uploadignore") {
       ignoreFiles = val.split('\n');
     }
@@ -156,19 +154,29 @@ app.post('/server/:subid/uploadApp', function(req, res) {
         //kept track of the number of files written so we can execute this at last
         if (numWritten === filenames.length) {
           tape.close();
+          res.write("finished bundling files\n");
 
           //we have to get our server before we do anything
           vultr.getServer(req.params.subid, (err, result) => {
             if (err) return res.json(err);
-            vultr.deployApp(fs.createReadStream(path.join(process.cwd(),'uploads','out.tar')), result[req.params.subid]);
+            vultr.deployApp(fs.createReadStream(path.join(process.cwd(),'uploads','out.tar')),
+              result[req.params.subid],
+              (data) => {
+                res.write(data);
+                if (data === 'process starting...\n') {
+                  res.end();
+                }
+              });
           });
         }
       });
     }
   });
 
-  //send a thing back to user
-  res.json({message: 'wow'});
+  const vultrApp = fs.readFileSync('./apis/vultrApp.service');
+  tape.append('vultrApp.service', vultrApp, () => {
+    //TODO send client something
+  });
 
   //pipe our request over to busboy
   req.pipe(busboy);

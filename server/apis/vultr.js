@@ -207,11 +207,12 @@ VultrClient.prototype.exec = function(command, server, onData, onEnd) {
   });
 }
 
-VultrClient.prototype.deployApp = function(stream, server) {
+VultrClient.prototype.deployApp = function(stream, server, onData) {
   //create ssh2 connection to server
   let conn = new Client();
   conn.on('ready', () => {
     console.log('client ready');
+    onData('connected to server...\n');
     //connect using sftp
     conn.sftp((err, sftp) => {
       if (err) return console.log(err);
@@ -220,13 +221,15 @@ VultrClient.prototype.deployApp = function(stream, server) {
       let writeStream = sftp.createWriteStream('/root/app.tar');
 
       console.log('uploading app...');
+      onData('uploading app...\n')
 
       stream
       .pipe(writeStream)
       .on('close', (err) => {
-        if (err) return console.log(err);
+        if (err) return onData(err);
 
         console.log('decompressing app...');
+        onData('decompressing app...\n');
 
         //unzip the file and put it in a file, deleting the old one if it existed
         conn.exec(
@@ -235,19 +238,22 @@ VultrClient.prototype.deployApp = function(stream, server) {
           'mkdir app;' +
           'tar -xf app.tar -C app;' +
           'rm app.tar;', (err, stream) => {
-            if (err) return console.log(err);
+            if (err) return onData(err);
 
             stream.on('error', (err) => {
               console.log('error:', err);
+              onData(err);
             });
             stream.on('data', (chunk) => {
               process.stdout.write('.');
+              onData(chunk.toString());
               // process.stdout.write(chunk.toString());
             });
 
             stream.on('end', () => {
               console.log('app decompressed...');
               console.log('installing node.js...');
+              onData('installing node.js...\n');
 
               //for installing nodejs and updating npm
               conn.exec(
@@ -258,15 +264,17 @@ VultrClient.prototype.deployApp = function(stream, server) {
                 //if npm isn't installed, install it and apparently update npm
                 'dpkg -s npm || (apt install npm -y && curl -L https://www.npmjs.com/install.sh | sh);',
                 (err, stream) => {
-                  if (err) return console.log(err);
+                  if (err) return onData(err);
 
                   stream.on('error', (err) => {
                     console.log('error:', err);
+                    onData(err);
                   });
 
                   stream.on('data', (chunk) => {
                     // process.stdout.write(chunk.toString());
                     process.stdout.write('.');
+                    onData(chunk.toString());
                   });
 
                   stream.on('end', () => {
@@ -276,7 +284,6 @@ VultrClient.prototype.deployApp = function(stream, server) {
                     conn.exec(
                       'cd /root/app;' +
                       'npm i --only=prod;' +
-                      '[ -e env.sh ] && source env.sh;' + //run env.sh if it exists
                       'killall node;' + //kill any instances of node running
                       'mv /root/app/vultrApp.service /etc/systemd/system/vultrApp.service;' +
                        //stop a service if it exists
@@ -284,16 +291,19 @@ VultrClient.prototype.deployApp = function(stream, server) {
                       'systemctl enable vultrApp.service;' + //start systemctl
                       'systemctl start vultrApp.service;',
                       (err, stream) => {
-                        if (err) return console.log(err);
+                        if (err) return onData(err);
 
                         stream.on('error', (err) => {
                           console.log('error:', err);
+                          onData(err);
                         });
                         stream.on('data', (chunk) => {
                           process.stdout.write('.');
+                          onData(chunk.toString());
                         });
                         stream.on('end', () => {
                           console.log('process should be starting...');
+                          onData('process starting...\n');
                           conn.end();
                         });
                       });

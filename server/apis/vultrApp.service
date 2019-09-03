@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
+ExecStartPre=-source /root/app/env.sh
 ExecStart=npm start --prefix /root/app
 Restart=on-failure
 RestartSec=5s

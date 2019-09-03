@@ -82,6 +82,13 @@ class App extends React.Component {
         this.setState({ sshLoading: false });
       }
     });
+
+    //listener for upload responses
+    socket.on('uploadResp', (data) => {
+      // console.log()
+      const parsedData = JSON.parse(data);
+      if (parsedData.message) console.log(parsedData.message);
+    });
   }
 
   getServerFromUrl(url) {
@@ -127,11 +134,11 @@ class App extends React.Component {
 
           <Route path="/server/ssh/:serverid" render={props => <SshPage {...props}
             server={this.state.servers.find(server => server.SUBID === props.match.params.serverid)}
-            socket={this.state.socket}
             loading={this.state.sshLoading}
             sendCommand={this.sendSshCommand.bind(this)}/>} />
 
           <Route path="/server/:serverid" render={props => <ServerPage {...props}
+            loading={this.state.uploadLoading}
             server={this.state.servers.find(server => server.SUBID === props.match.params.serverid)} />} />
 
           <Route path="/addServer" component={AddServer} />
