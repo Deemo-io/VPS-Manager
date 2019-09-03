@@ -85,6 +85,18 @@ class ServerPage extends React.Component {
     this.setState({numFiles: e.target.files.length});
   }
 
+  restartServer() {
+    fetch(Settings.host+'/server/'+this.props.server.SUBID+'/restart', {
+      method: 'POST'
+    })
+    .then(res => {
+      this.setState({ done: true });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+  }
+
   render() {
     if (!this.props.server) return <h1>Loading...</h1>
     if (this.state.done) return <Redirect to="/" />
@@ -118,7 +130,7 @@ class ServerPage extends React.Component {
                 <p>Selected files: {this.state.numFiles}</p>
 
                 <p style={{marginBottom: 0}}>Ignore these files/folders (similar to a .gitignore):</p>
-                <textarea placeholder="" defaultValue={"node_modules\npackage-lock.json"} style={{display: 'block', margin: '10px 0'}} id="uploadignore"></textarea>
+                <textarea placeholder="" defaultValue={"node_modules\npackage-lock.json\n.git"} style={{display: 'block', margin: '10px 0'}} id="uploadignore"></textarea>
 
                 <button className="button" type="submit">Submit</button>
               </form>
@@ -127,7 +139,8 @@ class ServerPage extends React.Component {
 
           <h2>Interact with server</h2>
           <div>
-            <Link to={"/server/ssh/"+this.props.server.SUBID} className="button">Enter Terminal</Link>
+            <div style={{marginBottom: '10px'}}><Link to={"/server/ssh/"+this.props.server.SUBID} className="button">Enter Terminal</Link></div>
+            <div><button className="button" onClick={() => this.restartServer()}>Restart Server</button></div>
           </div>
 
           <h2>Be careful - there's no going back</h2>

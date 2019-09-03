@@ -1,8 +1,5 @@
 const request = require('request-promise');
 const Client = require('ssh2').Client;
-const Ignore = require('fstream-ignore');
-const tar = require('tar');
-const zlib = require('zlib');
 const fs = require('fs');
 
 function VultrClient(options) {
@@ -68,6 +65,11 @@ VultrClient.prototype.getServer = function(subid, callback) {
 //other parameters are optional and can be found at https://www.vultr.com/api/#server_create
 VultrClient.prototype.createServer = function(options, callback) {
   this.makeApiRequest('server/create', {method: 'POST', form: options}, callback);
+}
+
+VultrClient.prototype.restartServer = function(subid, callback) {
+  //server/start restarts if the server is already running
+  this.makeApiRequest('server/start', {method: 'POST', form: {SUBID: subid}}, callback);
 }
 
 //should be called with the SUBID of the server you're trying to desroy

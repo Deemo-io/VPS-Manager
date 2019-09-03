@@ -5,7 +5,8 @@ const VultrClient = require('./apis/vultr');
 const CloudflareClient = require('./apis/cloudflare.js');
 const fs = require('fs');
 const path = require('path');
-const Tar = require('tar-async')
+const Tar = require('tar-async');
+const tar = require('tar-stream');
 const Busboy = require('busboy');
 
 if (!process.env.VULTR_API_KEY) console.log("VULTR_API_KEY NOT FOUND, CHECK ENV.SH");
@@ -91,6 +92,12 @@ app.post('/server/:subid/ssh', function(req, res) {
   });
 });
 
+app.post('/server/:subid/restart', function(req, res) {
+    vultr.restartServer(req.params.subid, (err, result) => {});
+    //there's no response to this route on Vultr
+    res.json({success: true});
+});
+
 app.post('/server/:subid/uploadApp', function(req, res) {
   let busboy = new Busboy({ headers: req.headers, preservePath: true });
   let filesMap = {};//the key is the filename, value is file contents
@@ -98,7 +105,8 @@ app.post('/server/:subid/uploadApp', function(req, res) {
   if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
   }
-  tape = new Tar({output: fs.createWriteStream('./uploads/out.tar')});
+  // tape = new Tar({output: fs.createWriteStream('./uploads/out.tar')});
+  let tape = new tar.pack();
 
   //we write the head here so we can send a stream as a result
   res.writeHead(200, {
@@ -142,41 +150,37 @@ app.post('/server/:subid/uploadApp', function(req, res) {
   //when we're done getting files, close the tar file
   busboy.on('finish', () => {
     //write all the files to the tape
-    let numWritten = 0;
     const filenames = Object.keys(filesMap);
     //loop through every file name (key) in filesMap
     for (let i = 0; i < filenames.length; i++) {
       //write the data from that filename to the tape
-      tape.append(filenames[i], filesMap[filenames[i]], () => {
-        // console.log('added ' + filenames[i]);
-        //TODO send client something here
-        numWritten++;
-        //kept track of the number of files written so we can execute this at last
-        if (numWritten === filenames.length) {
-          tape.close();
-          res.write("finished bundling files\n");
-
-          //we have to get our server before we do anything
-          vultr.getServer(req.params.subid, (err, result) => {
-            if (err) return res.json(err);
-            vultr.deployApp(fs.createReadStream(path.join(process.cwd(),'uploads','out.tar')),
-              result[req.params.subid],
-              (data) => {
-                res.write(data);
-                if (data === 'process starting...\n') {
-                  res.end();
-                }
-              });
-          });
-        }
-      });
+      tape.entry({ name: filenames[i] }, filesMap[filenames[i]]);
+      //TODO send client something here for adding a file
     }
+
+    //finalize the tape
+    tape.finalize();
+    res.write("finished bundling files\n");
+
+    //we have to get our server before we do anything
+    vultr.getServer(req.params.subid, (err, result) => {
+      if (err) return res.json(err);
+
+      //deploy the files on the tape to the server
+      vultr.deployApp(tape,
+        result[req.params.subid],
+        (data) => {
+          res.write(data);
+          if (data === 'process starting...\n') {
+            res.end();
+          }
+        });
+    });
   });
 
   const vultrApp = fs.readFileSync('./apis/vultrApp.service');
-  tape.append('vultrApp.service', vultrApp, () => {
-    //TODO send client something
-  });
+  tape.entry({ name: 'vultrApp.service' }, vultrApp);
+  //maybe send the client something here
 
   //pipe our request over to busboy
   req.pipe(busboy);
