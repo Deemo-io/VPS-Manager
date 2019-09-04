@@ -77,114 +77,6 @@ VultrClient.prototype.destroyServer = function(subid, callback) {
   this.makeApiRequest('server/destroy', {method: 'POST', form: {SUBID: subid}}, callback);
 }
 
-// VultrClient.prototype.deplooyApp = function(path, server) {
-//   //create ssh2 connection to server
-//   let conn = new Client();
-//   conn.on('ready', () => {
-//     console.log('client ready');
-//     //connect using sftp
-//     conn.sftp((err, sftp) => {
-//       if (err) return console.log(err);
-//
-//       //create write stream i guess?
-//       let writeStream = sftp.createWriteStream('/root/app.tar.gz');
-//
-//       console.log('uploading app...');
-//
-//       Ignore({ path: path, ignoreFiles: ['.deployignore'] })
-//       .pipe(tar.Pack())
-//       .pipe(zlib.Gzip())
-//       .pipe(writeStream)
-//       .on('close', (err) => {
-//         if (err) return console.log(err);
-//
-//         console.log('decompressing app...');
-//
-//         //unzip the file and put it in a file, deleting the old one if it existed
-//         conn.exec(
-//           'cd /root;' +
-//           '[ -e app ] && rm -r app;' +
-//           'mkdir app;' +
-//           'tar -xvzf app.tar.gz -C app --strip-components=1;' +
-//           'rm app.tar.gz;', (err, stream) => {
-//             if (err) return console.log(err);
-//
-//             stream.on('error', (err) => {
-//               console.log('error:', err);
-//             });
-//             stream.on('data', (chunk) => {
-//               // console.log('data:', chunk.toString());
-//               // console.log('.');
-//               process.stdout.write('.');
-//             });
-//
-//             // console.log('app decompressed');
-//             // console.log('installing node.js...');
-//             stream.on('end', () => {
-//               console.log('app decompressed...');
-//               console.log('installing node.js...');
-//
-//               //for installing nodejs and updating npm
-//               conn.exec(
-//                 'apt-get update -y;' +
-//                 'apt-get upgrade -y;' +
-//                 'apt-get dist-upgrade -y;' +
-//                 'dpkg -s nodejs || apt install nodejs -y;' +
-//                 //if npm isn't installed, install it and apparently update npm
-//                 'dpkg -s npm || (apt install npm -y && curl -L https://www.npmjs.com/install.sh | sh);',
-//                 (err, stream) => {
-//                   if (err) return console.log(err);
-//
-//                   stream.on('error', (err) => {
-//                     console.log('error:', err);
-//                   });
-//
-//                   stream.on('data', (chunk) => {
-//                     // console.log('data: ', chunk.toString());
-//                     process.stdout.write('.');
-//                   });
-//
-//                   stream.on('end', () => {
-//                     console.log('done');
-//                     //start the app
-//
-//                     conn.exec(
-//                       'cd /root/app;' +
-//                       'npm i --only=prod;' +
-//                       '[ -e env.sh ] && source env.sh;' + //run env.sh if it exists
-//                       'killall node;' + //kill any instances of node running
-//                       'mv /root/app/vultrApp.service /etc/systemd/system/vultrApp.service;' +
-//                        //stop a service if it exists
-//                       'systemctl is-active --quiet vultrApp.service && systemctl stop vultrApp.service' +
-//                       'systemctl enable vultrApp.service;' + //start systemctl
-//                       'systemctl start vultrApp.service;',
-//                       (err, stream) => {
-//                         if (err) return console.log(err);
-//
-//                         stream.on('error', (err) => {
-//                           console.log('error:', err);
-//                         });
-//                         stream.on('data', (chunk) => {
-//                           process.stdout.write('.');
-//                         });
-//                         stream.on('end', () => {
-//                           console.log('process should be starting...');
-//                           conn.end();
-//                         });
-//                       });
-//                   });
-//                 });
-//             });
-//           });
-//       });
-//     });
-//   }).connect({
-//     host: server['main_ip'],
-//     username: 'root',
-//     password: server['default_password']
-//   });
-// }
-
 VultrClient.prototype.exec = function(command, server, onData, onEnd) {
   let conn = new Client();
   conn.on('ready', () => {
@@ -206,6 +98,26 @@ VultrClient.prototype.exec = function(command, server, onData, onEnd) {
     host: server['main_ip'],
     username: 'root',
     password: server['default_password']
+  });
+}
+
+//returns a promise, runs any command via ssh given an ssh connection
+VultrClient.prototype.runCommand = function(conn, command, onData) {
+  return new Promise((resolve, reject) => {
+    conn.exec(command, (err, stream) => {
+      if (err) return reject(err);
+
+      stream.on('error', (err) => {
+        return reject(err);
+      });
+      stream.on('data', (chunk) => {
+        onData(chunk);
+      });
+      stream.on('end', () => {
+        resolve();
+      });
+
+    });
   });
 }
 
@@ -233,86 +145,53 @@ VultrClient.prototype.deployApp = function(stream, server, onData) {
         console.log('decompressing app...');
         onData('decompressing app...\n');
 
-        //unzip the file and put it in a file, deleting the old one if it existed
-        conn.exec(
-          'cd /root;' +
-          '[ -e app ] && rm -rf app;' +
-          'mkdir app;' +
-          'tar -xf app.tar -C app;' +
-          'rm app.tar;', (err, stream) => {
-            if (err) return onData(err);
+        //function we can pass to runCommand() to send information back to the user
+        function handleStreamData(chunk) {
+          process.stdout.write('.');
+          onData(chunk.toString());
+        }
 
-            stream.on('error', (err) => {
-              console.log('error:', err);
-              onData(err);
-            });
-            stream.on('data', (chunk) => {
-              process.stdout.write('.');
-              onData(chunk.toString());
-              // process.stdout.write(chunk.toString());
-            });
+        //untars the app, deleting the previous 'app' folder
+        this.runCommand(conn, 'cd /root;' +
+                              '[ -e app ] && rm -rf app;' +
+                              'mkdir app;' +
+                              'tar -xf app.tar -C app;' +
+                              'rm app.tar;', handleStreamData)
+        .then(() => {
+          console.log('app decompressed...');
+          console.log('installing node.js...');
+          onData('installing node.js...\n');
 
-            stream.on('end', () => {
-              console.log('app decompressed...');
-              console.log('installing node.js...');
-              onData('installing node.js...\n');
+          //installs any OS updates, nodejs updates, and installs npm
+          return this.runCommand(conn, 'apt-get update -y;' +
+            'apt-get upgrade -y;' +
+            'apt-get dist-upgrade -y;' +
+            'dpkg -s nodejs || apt install nodejs -y;' +
+            //if npm isn't installed, install it and update npm
+            'dpkg -s npm || (apt install npm -y && curl -L https://www.npmjs.com/install.sh | sh);',
+            handleStreamData)
+        })
+        .then(() => {
+          console.log('done');
 
-              //for installing nodejs and updating npm
-              conn.exec(
-                'apt-get update -y;' +
-                'apt-get upgrade -y;' +
-                'apt-get dist-upgrade -y;' +
-                'dpkg -s nodejs || apt install nodejs -y;' +
-                //if npm isn't installed, install it and apparently update npm
-                'dpkg -s npm || (apt install npm -y && curl -L https://www.npmjs.com/install.sh | sh);',
-                (err, stream) => {
-                  if (err) return onData(err);
-
-                  stream.on('error', (err) => {
-                    console.log('error:', err);
-                    onData(err);
-                  });
-
-                  stream.on('data', (chunk) => {
-                    // process.stdout.write(chunk.toString());
-                    process.stdout.write('.');
-                    onData(chunk.toString());
-                  });
-
-                  stream.on('end', () => {
-                    console.log('done');
-                    //start the app
-
-                    conn.exec(
-                      'cd /root/app;' +
-                      'npm i --only=prod;' +
-                      'killall node;' + //kill any instances of node running
-                      'mv /root/app/vultrApp.service /etc/systemd/system/vultrApp.service;' +
-                       //stop a service if it exists
-                      'systemctl is-active --quiet vultrApp.service && systemctl stop vultrApp.service' +
-                      'systemctl enable vultrApp.service;' + //start systemctl
-                      'systemctl start vultrApp.service;',
-                      (err, stream) => {
-                        if (err) return onData(err);
-
-                        stream.on('error', (err) => {
-                          console.log('error:', err);
-                          onData(err);
-                        });
-                        stream.on('data', (chunk) => {
-                          process.stdout.write('.');
-                          onData(chunk.toString());
-                        });
-                        stream.on('end', () => {
-                          console.log('process should be starting...');
-                          onData('process starting...\n');
-                          conn.end();
-                        });
-                      });
-                  });
-                });
-            });
-          });
+          //stop our previous service, override it and start it again
+          return this.runCommand(conn, 'cd /root/app;' +
+            'npm i --only=prod;' +
+            'killall node;' + //kill any instances of node running
+            'mv /root/app/vultrApp.service /etc/systemd/system/vultrApp.service;' +
+            //stop a service if it exists
+           'systemctl is-active --quiet vultrApp.service && systemctl stop vultrApp.service' +
+           'systemctl enable vultrApp.service;' + //start systemctl
+           'systemctl start vultrApp.service;', handleStreamData)
+        })
+        .then(() => {
+          console.log('process should be starting...');
+          onData('process starting...\n');
+        })
+        .catch(err => {
+          console.log(err);
+          conn.end();
+        });
       });
     });
   }).connect({
