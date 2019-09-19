@@ -5,17 +5,18 @@ const VultrClient = require('./apis/vultr');
 const CloudflareClient = require('./apis/cloudflare.js');
 const fs = require('fs');
 const path = require('path');
-const Tar = require('tar-async');
 const tar = require('tar-stream');
 const Busboy = require('busboy');
 
 if (!process.env.VULTR_API_KEY) console.log("VULTR_API_KEY NOT FOUND, CHECK ENV.SH");
 
 const app = express();
+const reactApp = fs.readFileSync('./public/index.html');
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const vultr = new VultrClient({apiKey: process.env.VULTR_API_KEY});
 const cloudflare = new CloudflareClient({apiKey: process.env.CLOUDFLARE_API_KEY, email: process.env.CLOUDFLARE_EMAIL})
+app.use(express.static(__dirname + '/public'));
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -102,10 +103,6 @@ app.post('/server/:subid/uploadApp', function(req, res) {
   let busboy = new Busboy({ headers: req.headers, preservePath: true });
   let filesMap = {};//the key is the filename, value is file contents
   let ignoreFiles = [];//the files/directories that we are supposed to ignore
-  if (!fs.existsSync('./uploads')) {
-    fs.mkdirSync('./uploads');
-  }
-  // tape = new Tar({output: fs.createWriteStream('./uploads/out.tar')});
   let tape = new tar.pack();
 
   //we write the head here so we can send a stream as a result
@@ -132,16 +129,15 @@ app.post('/server/:subid/uploadApp', function(req, res) {
       //add files to map
       const newFilename = filename.slice(filename.indexOf('/')+1);
       if (filesMap[newFilename]) {
-        filesMap[newFilename] += data;
+        filesMap[newFilename] = Buffer.concat([filesMap[newFilename], data], filesMap[newFilename].length + data.length);//+= data;
       }
       else {
-        filesMap[newFilename] = data;
+        filesMap[newFilename] = Buffer.alloc(0);//data;
       }
     });
   });
 
   busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
-    // console.log('got '+fieldname+' with value: '+val);
     if (fieldname === "uploadignore") {
       ignoreFiles = val.split('\n');
     }
@@ -154,6 +150,12 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     //loop through every file name (key) in filesMap
     for (let i = 0; i < filenames.length; i++) {
       //write the data from that filename to the tape
+      if (filenames[i].indexOf('.png') !== -1) {
+        console.log(filenames[i]);
+        fs.writeFile(filenames[i], filesMap[filenames[i]], () => {
+
+        });
+      }
       tape.entry({ name: filenames[i] }, filesMap[filenames[i]]);
       //TODO send client something here for adding a file
     }
@@ -242,6 +244,12 @@ app.post('/zone/:zoneid/adddns', function(req, res) {
 
     res.json(result);
   });
+});
+
+//route all other requests to index.html
+app.get('*', function(req, res) {
+  res.write(reactApp);
+  res.end();
 });
 
 //socket.io stuff
