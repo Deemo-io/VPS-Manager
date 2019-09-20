@@ -116,6 +116,7 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     //here we are assuming that ignoreFiles has already arrived
     //I think it's safe because someone on stackoverflow said order is garunteed
     //for multipart/form-data
+    // console.log(fieldname + ", " + encoding + ", " + mimetype);
     let filenameParts = filename.split('/');
     file.on('data', (data) => {
       //early termination if filename matches an ignore file
@@ -129,10 +130,15 @@ app.post('/server/:subid/uploadApp', function(req, res) {
       //add files to map
       const newFilename = filename.slice(filename.indexOf('/')+1);
       if (filesMap[newFilename]) {
-        filesMap[newFilename] = Buffer.concat([filesMap[newFilename], data], filesMap[newFilename].length + data.length);//+= data;
+        if (mimetype === "image/png") {
+          filesMap[newFilename] = Buffer.concat([filesMap[newFilename], data], filesMap[newFilename].length + data.length);
+        }
+        else {
+          filesMap[newFilename] += data;
+        }
       }
       else {
-        filesMap[newFilename] = Buffer.alloc(0);//data;
+        filesMap[newFilename] = data;
       }
     });
   });
@@ -150,12 +156,6 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     //loop through every file name (key) in filesMap
     for (let i = 0; i < filenames.length; i++) {
       //write the data from that filename to the tape
-      if (filenames[i].indexOf('.png') !== -1) {
-        console.log(filenames[i]);
-        fs.writeFile(filenames[i], filesMap[filenames[i]], () => {
-
-        });
-      }
       tape.entry({ name: filenames[i] }, filesMap[filenames[i]]);
       //TODO send client something here for adding a file
     }
