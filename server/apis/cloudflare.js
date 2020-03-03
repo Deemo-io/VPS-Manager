@@ -6,10 +6,14 @@ function CloudflareClient(options) {
   this.email = options.email;
   this.userId = "";
 
+  if (!options.apiKey || !options.email) console.error("CLOUDFLARE EMAIL AND APIKEY NOT FOUND, CHECK ENV.SH");
+
   //this is all the requests we have to wait for before getting our userid
   this.queue = [];
   //send userid request and run everything from the queue
   this.getUser((err, data) => {
+    if (err) return console.log(err);
+
     this.userId = data.result.id;
     for (let i = 0; i < this.queue.length; i++) {
       this.makeApiRequest(this.queue[i].uri, this.queue[i].methodOrOptions, this.queue[i].callback);

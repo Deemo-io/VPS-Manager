@@ -131,7 +131,7 @@ app.post('/server/:subid/uploadApp', function(req, res) {
       const newFilename = filename.slice(filename.indexOf('/')+1);
       if (filesMap[newFilename]) {
         // console.log(mimetype + " - " + newFilename);
-        if (mimetype === "image/png" || mimetype === "image/vnd.microsoft.icon" || mimetype === "audio/wav" || mimetype === "application/font-woff" || mimetype === "application/octet-stream") {
+        if (mimetype === "image/png" || mimetype === "image/jpeg" || mimetype === "image/vnd.microsoft.icon" || mimetype === "audio/wav" || mimetype === "application/font-woff" || mimetype === "application/octet-stream") {
           filesMap[newFilename] = Buffer.concat([filesMap[newFilename], data], filesMap[newFilename].length + data.length);
         }
         else {
