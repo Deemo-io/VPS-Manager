@@ -4,11 +4,11 @@ const cors = require('cors');
 const VultrClient = require('./apis/vultr');
 const CloudflareClient = require('./apis/cloudflare.js');
 const fs = require('fs');
-const path = require('path');
 const tar = require('tar-stream');
 const Busboy = require('busboy');
+require('dotenv').config(); //setup environment
 
-if (!process.env.VULTR_API_KEY) console.log("VULTR_API_KEY NOT FOUND, CHECK ENV.SH");
+if (!process.env.VULTR_API_KEY) console.log("VULTR_API_KEY NOT FOUND, CHECK .ENV");
 
 const app = express();
 const reactApp = fs.readFileSync('./public/index.html');
