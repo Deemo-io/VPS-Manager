@@ -103,6 +103,7 @@ app.post('/server/:subid/uploadApp', function(req, res) {
   let busboy = new Busboy({ headers: req.headers, preservePath: true });
   let filesMap = {};//the key is the filename, value is file contents
   let ignoreFiles = [];//the files/directories that we are supposed to ignore
+  let staticDir = null;//the directory that has all the static files. We need to preserve these in-between uploads
   let tape = new tar.pack();
 
   //we write the head here so we can send a stream as a result
@@ -148,6 +149,9 @@ app.post('/server/:subid/uploadApp', function(req, res) {
     if (fieldname === "uploadignore") {
       ignoreFiles = val.split('\n');
     }
+    else if (fieldname === "staticDir" && val !== "") {
+      staticDir = val;
+    }
   });
 
   //when we're done getting files, close the tar file
@@ -172,6 +176,7 @@ app.post('/server/:subid/uploadApp', function(req, res) {
       //deploy the files on the tape to the server
       vultr.deployApp(tape,
         result[req.params.subid],
+        staticDir,
         (data) => {
           res.write(data);
           if (data === 'process starting...\n') {
@@ -264,9 +269,7 @@ io.on('connection', function(socket) {
       if (err) return socket.emit('sshResp', JSON.stringify({error: true, message: err}));
 
       vultr.exec(parsedData.command, result[parsedData.server], (data) => {
-        // if (err) return res.json(err);
-        // if (err) return socket.emit('sshResp', JSON.stringify({error: true, message: err}));
-        //TODO do error checking
+        //TODO error checking
 
         // res.json({output: result});
         socket.emit('sshResp', JSON.stringify({message: data}));

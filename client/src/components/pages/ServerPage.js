@@ -44,6 +44,10 @@ class ServerPage extends React.Component {
     let uploadIgnore = document.getElementById('uploadignore').value;
     uploadData.append('uploadignore', uploadIgnore);
 
+    //the static dir part
+    let staticDir = document.getElementById('staticDir').value;
+    uploadData.append('staticDir', staticDir);
+
     //add files
     for (let i = 0; i < this.filesRef.files.length; i++) {
       uploadData.append(this.filesRef.files[i].name, this.filesRef.files[i]);
@@ -131,6 +135,8 @@ class ServerPage extends React.Component {
 
                 <p style={{marginBottom: 0}}>Ignore these files/folders (similar to a .gitignore):</p>
                 <textarea placeholder="" defaultValue={"node_modules\npackage-lock.json\n.git"} style={{display: 'block', margin: '10px 0'}} id="uploadignore"></textarea>
+
+                <p>Static path: <input type="text" placeholder="N/A" defaultValue={"public/static"} id="staticDir" /></p>
 
                 <button className="button" type="submit">Submit</button>
               </form>

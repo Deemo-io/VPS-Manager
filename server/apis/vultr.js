@@ -121,7 +121,7 @@ VultrClient.prototype.runCommand = function(conn, command, onData) {
   });
 }
 
-VultrClient.prototype.deployApp = function(stream, server, onData) {
+VultrClient.prototype.deployApp = function(stream, server, staticDir=null, onData) {
   //create ssh2 connection to server
   let conn = new Client();
   conn.on('ready', () => {
@@ -151,12 +151,26 @@ VultrClient.prototype.deployApp = function(stream, server, onData) {
           onData(chunk.toString());
         }
 
+        //[0] makes command to move our static folder to the /root directory if staticDir was specified
+        //[1] is the command to move our static folder back into the /root/app directory
+        let staticDirCommands = ['', ''];
+        if (staticDir !== null) {
+          let newDir = staticDir.slice(staticDir.lastIndexOf('/')+1);
+          let oldDir = staticDir.slice(0, staticDir.lastIndexOf('/'));
+          staticDirCommands[0] += '[ -e app/'+staticDir+' ] && mv app/'+staticDir+' /root;';
+          staticDirCommands[1] += '[ -e app/'+staticDir+' ] && rm -rf app/'+staticDir+';'+
+                                  '[ -e /root/'+newDir+' ] && mv /root/'+newDir+' app/'+oldDir+';';
+        }
+
         //untars the app, deleting the previous 'app' folder
+        //if there's a 'staticDir' specified, it will 
         this.runCommand(conn, 'cd /root;' +
+                              staticDirCommands[0] +
                               '[ -e app ] && rm -rf app;' +
                               'mkdir app;' +
                               'tar -xf app.tar -C app;' +
-                              'rm app.tar;', handleStreamData)
+                              'rm app.tar;' +
+                              staticDirCommands[1], handleStreamData)
         .then(() => {
           console.log('app decompressed...');
           console.log('installing node.js...');
